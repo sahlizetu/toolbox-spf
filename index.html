@@ -392,7 +392,7 @@
         </div>
         <div class="panel">
           <div class="panel-header"><div class="panel-title">🌐 Domaines extraits</div><span class="lc" id="cd-oc">0</span></div>
-          <div class="limit-banner" id="cd-limit">⚠ <span id="cd-limittxt"></span></div>
+          <div class="limit-banner" id="cd-limit"></div>
           <div class="clean-summary" id="cd-sum"></div>
           <div class="output-body" id="cd-out">EMPTY</div>
           <div class="panel-footer">
@@ -421,7 +421,7 @@
         </div>
         <div class="panel">
           <div class="panel-header"><div class="panel-title">🟠 IPs extraites</div><span class="lc" id="ci-oc">0</span></div>
-          <div class="limit-banner" id="ci-limit">⚠ <span id="ci-limittxt"></span></div>
+          <div class="limit-banner" id="ci-limit"></div>
           <div class="clean-summary" id="ci-sum"></div>
           <div class="output-body" id="ci-out">EMPTY</div>
           <div class="panel-footer">
@@ -684,7 +684,7 @@ function clrIP(p,maxIP){
   });});
 });
 
-/* ══ CLEANER ══ */
+/* ══ CLEANER — VERSION ILLIMITÉE ══ */
 let subMode = 'keep';
 
 function switchCleanerTab(tab) {
@@ -698,11 +698,6 @@ function setSubMode(m) {
   subMode = m;
   document.getElementById('cmode-keep').className = 'cmode-btn' + (m === 'keep' ? ' active' : '');
   document.getElementById('cmode-strip').className = 'cmode-btn' + (m === 'strip' ? ' active' : '');
-}
-
-function isIPv4(str) {
-  const p = str.split('.');
-  return p.length === 4 && p.every(x => /^\d+$/.test(x) && +x >= 0 && +x <= 255 && String(+x) === x);
 }
 
 function isValidDomain(d) {
@@ -779,12 +774,13 @@ function renderCleanList(outId, list) {
   });
 }
 
-function finishExtract(p, raw, MAX, typeLabel) {
+// Version ILLIMITÉE — suppression de la limite MAX (100 pour domaines, 200 pour IPs)
+function finishExtract(p, raw, typeLabel) {
   if (p === 'cd' && subMode === 'strip') raw = raw.map(d => getRootDomain(d));
   const seen = new Set(); const kept = [];
   raw.forEach(v => { const k = v.toLowerCase(); if (!seen.has(k)) { seen.add(k); kept.push(v); } });
-  const limited = kept.length > MAX;
-  const final = kept.slice(0, MAX);
+  // PLUS DE LIMITE — on garde TOUS les éléments
+  const final = kept;
   store[p] = final;
   renderCleanList(p + '-out', final);
   const totalIn = document.getElementById(p + '-in').value.split('\n').filter(l => l.trim()).length;
@@ -796,11 +792,10 @@ function finishExtract(p, raw, MAX, typeLabel) {
   const sum = document.getElementById(p + '-sum');
   sum.textContent = `✦ ${final.length} ${typeLabel} extraite(s) · ${raw.length - final.length} ignorée(s)`;
   sum.classList.add('show');
+  // Suppression du banner de limite
   const lb = document.getElementById(p + '-limit');
-  if (limited) {
-    document.getElementById(p + '-limittxt').textContent = `Limite ${MAX} atteinte — ${kept.length - MAX} entrée(s) supplémentaire(s) ignorée(s).`;
-    lb.classList.add('show');
-  } else lb.classList.remove('show');
+  lb.classList.remove('show');
+  lb.innerHTML = '';
   enableCopy(p, final.length > 0);
   document.getElementById(p + '-cl').textContent = 'Copier';
   document.getElementById(p + '-cb').classList.remove('copied');
@@ -809,13 +804,13 @@ function finishExtract(p, raw, MAX, typeLabel) {
 function runDomainExtract() {
   const text = document.getElementById('cd-in').value;
   if (!text.trim()) return;
-  finishExtract('cd', extractDomains(text), 100, 'domaine(s)');
+  finishExtract('cd', extractDomains(text), 'domaine(s)');
 }
 
 function runIPExtract() {
   const text = document.getElementById('ci-in').value;
   if (!text.trim()) return;
-  finishExtract('ci', extractIPs(text), 200, 'IP(s)');
+  finishExtract('ci', extractIPs(text), 'IP(s)');
 }
 
 function copyExtract(p) {
@@ -835,7 +830,9 @@ function clrExtract(p) {
   enableCopy(p, false);
   [p + '-sin', p + '-sout', p + '-srem'].forEach(id => document.getElementById(id).textContent = 0);
   document.getElementById(p + '-sum').classList.remove('show');
-  document.getElementById(p + '-limit').classList.remove('show');
+  const lb = document.getElementById(p + '-limit');
+  lb.classList.remove('show');
+  lb.innerHTML = '';
 }
 
 ['cd-in', 'ci-in'].forEach(id => {
